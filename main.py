@@ -25,6 +25,7 @@ app = Flask(__name__)
 # cors = CORS(app, resources={r"/submit": {"origins": "http://localhost:4200"}})
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 output_data = []
+data_list = []
 searchTerm = ''
 account = ''
 counter = 0
@@ -101,7 +102,7 @@ def scrape():
 def listen_counter():
     def respond_to_client():
         while True:
-            time.sleep(5)
+            time.sleep(10)
             global counter
             counter += 1
             _data = json.dumps({"counter": counter})
@@ -113,12 +114,29 @@ def listen_counter():
 
 @app.route("/listen_posts")
 def listen_posts():
+    scrape_with_crochet(account_name=account)
+
     def get_posts():
-        scrape_with_crochet(account_name=account)  # Passing that URL to our Scraping Function
-        while not scrape_complete:
-            time.sleep(1)
-            _data = json.dumps(output_data)
-            yield f"data: {_data} \n\n"
+        global data_list
+        global output_data
+        try:
+            while not scrape_complete:
+
+                if data_list != output_data:
+                    data_list = output_data.copy()
+                    _data = json.dumps(output_data)
+                    print(output_data)
+                    yield f"data: {_data} \n\n"
+                time.sleep(1)
+        except GeneratorExit:
+            print('closed connection: ')
+            close_sse_connection()
+
+        if scrape_complete:
+            print("Finished Scraping")
+            yield "data: finished\n\n"
+            reset_scrape()
+            output_data = []
 
     return Response(get_posts(), mimetype="text/event-stream")
 
@@ -138,7 +156,7 @@ def scrape_with_crochet(account_name):
     # This will connect to the InstaSpider function in our scrapy file and after each yield will pass to the
     # crawler_result function.
     eventual = crawl_runner.crawl(InstagramAccount, usernames=account_name, term=searchTerm,
-                                  api_key='809506d9-a285-42a6-8f17-c9d12cdc8e44')
+                                  api_key='32977205-62f6-4698-8045-f940356f090a')
 
     eventual.addCallback(finished_scrape)
 
@@ -154,12 +172,27 @@ def finished_scrape(null):
     scrape_complete = True
 
 
+def reset_scrape():
+    """
+    A callback that reset the scraping status to resume .
+    """
+    global scrape_complete
+    scrape_complete = False
+
+
+def close_sse_connection():
+    global scrape_complete
+    scrape_complete = True
+    crawl_runner.stop()
+
+
+
 # This will append the data to the output data list.
 def _crawler_result(item, response, spider):
     output_data.append(dict(item))
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=80)
-    # http_server = WSGIServer(("localhost", 80), app)
-    # http_server.serve_forever()
+    # app.run(debug=True, port=80)
+    http_server = WSGIServer(("localhost", 80), app)
+    http_server.serve_forever()
