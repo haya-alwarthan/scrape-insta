@@ -100,8 +100,8 @@ class InstagramAccount(scrapy.Spider):
             print('search term== {}'.format(self.term))
             img_path_frontend = f"frontend/src/assets/temp/images/{base_post['post_id']}.jpeg"
             img_path = f"static/images/{base_post['post_id']}.jpeg"
-            urllib.request.urlretrieve(base_post['thumbnail_url'], img_path_frontend)
-            text += convert_img_to_text(img_path_frontend)
+            urllib.request.urlretrieve(base_post['thumbnail_url'], img_path)
+            text += convert_img_to_text(img_path)
             # print("extracted text {}".format(text))
 
         except Exception as error:
@@ -130,9 +130,9 @@ class InstagramAccount(scrapy.Spider):
                         }
 
                         img_path_frontend = f"frontend/src/assets/temp/images/{carousel_post['post_id']}.png"
-                        img_path = f"static/images/{carousel_post['post_id']}.png"
-                        urllib.request.urlretrieve(carousel_post['thumbnail_url'], img_path_frontend)
-                        text += convert_img_to_text(img_path_frontend)
+                        img_path = f"static/images/{carousel_post['post_id']}.jpeg"
+                        urllib.request.urlretrieve(carousel_post['thumbnail_url'], img_path)
+                        text += convert_img_to_text(img_path)
                         searched_space = carousel_post['media_text'] + ' ' + carousel_post['caption']
                         posts = []
                         if self.term in searched_space:
